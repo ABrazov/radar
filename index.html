@@ -58,27 +58,48 @@ body{
  border-radius:8px;
 }
 
+#zoom{
+ position:absolute;
+ top:20px;
+ right:20px;
+ font-size:28px;
+ cursor:pointer;
+}
+
 </style>
 </head>
 
 <body>
 
 <div id="radar">
+
 <div class="center">▲</div>
+
 <button id="start" onclick="startRadar()">Activar radar</button>
+
+<div id="zoom">🔍</div>
+
 </div>
 
 <script>
 
 const waypoints=[
- {name:"Colegio",lat:40.5089,lon:-3.6792},
+ {name:"Colegio",lat:40.4168,lon:-3.7038},
+ {name:"Cafe",lat:40.4175,lon:-3.7020},
+ {name:"Tienda",lat:40.4155,lon:-3.7050}
 ];
 
 let userLat=null;
 let userLon=null;
 let heading=0;
+let scale=4;
 
 const radar=document.getElementById("radar");
+
+document.getElementById("zoom").onclick=()=>{
+ scale*=1.5;
+ if(scale>20) scale=2;
+};
 
 waypoints.forEach(w=>{
  const el=document.createElement("div");
@@ -168,12 +189,26 @@ function update(){
   if(diff>180)diff-=360;
   if(diff<-180)diff+=360;
 
-  const x=window.innerWidth/2+diff*4;
+  let x=window.innerWidth/2+diff*scale;
 
   const d=distance(userLat,userLon,w.lat,w.lon);
 
+  let arrow="▲";
+
+  if(x<0){
+   x=10;
+   arrow="←";
+  }
+
+  if(x>window.innerWidth-80){
+   x=window.innerWidth-80;
+   arrow="→";
+  }
+
   w.el.style.left=x+"px";
   w.el.style.top="40%";
+
+  w.el.querySelector(".name").innerText=arrow+" "+w.name;
 
   w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
 
