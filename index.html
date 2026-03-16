@@ -58,7 +58,7 @@ body{
  border-radius:8px;
 }
 
-/* BRÚJULA */
+/* brújula */
 
 #compass{
  position:absolute;
@@ -115,13 +115,13 @@ body{
 <script>
 
 const waypoints=[
- {name:"Colegio",lat:40.5089,lon:-3.6792},
+{name:"Colegio",lat:40.5089,lon:-3.6792},
 ];
 
 let userLat=null;
 let userLon=null;
 let heading=0;
-let scale=4;
+let lastUpdate=0;
 
 const radar=document.getElementById("radar");
 const compass=document.getElementById("compass-inner");
@@ -149,30 +149,44 @@ function startRadar(){
   DeviceOrientationEvent.requestPermission().then(response=>{
    if(response==="granted"){
     window.addEventListener("deviceorientation",handleOrientation);
+    window.addEventListener("deviceorientationabsolute",handleOrientation,true);
    }
   });
  }else{
   window.addEventListener("deviceorientation",handleOrientation);
+  window.addEventListener("deviceorientationabsolute",handleOrientation,true);
  }
 
+}
+
+function angleDiff(a,b){
+ return (b - a + 540) % 360 - 180;
 }
 
 function handleOrientation(e){
 
+ const now=Date.now();
+
+ if(now-lastUpdate<40) return;
+ lastUpdate=now;
+
+ let newHeading;
+
  if(e.webkitCompassHeading!==undefined){
-  heading=e.webkitCompassHeading;
- }else{
-  let newHeading;
-
-if(e.webkitCompassHeading!==undefined){
- newHeading = e.webkitCompassHeading;
-}else{
- newHeading = 360 - e.alpha;
-}
-
-/* suavizado */
-heading = heading*0.9 + newHeading*0.1;
+  newHeading=e.webkitCompassHeading;
  }
+ else if(e.alpha!==null){
+  newHeading=360-e.alpha;
+ }
+ else{
+  return;
+ }
+
+ if(heading===0) heading=newHeading;
+
+ const diff=angleDiff(heading,newHeading);
+
+ heading+=diff*0.15;
 
  compass.style.transform="rotate("+(-heading)+"deg)";
 
@@ -225,7 +239,7 @@ function update(){
   if(diff>180)diff-=360;
   if(diff<-180)diff+=360;
 
-  let x=window.innerWidth/2+diff*scale;
+  let x=window.innerWidth/2+diff*4;
 
   const d=distance(userLat,userLon,w.lat,w.lon);
 
@@ -246,7 +260,11 @@ function update(){
 
   w.el.querySelector(".name").innerText=arrow+" "+w.name;
 
-  w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
+  if(d<1){
+   w.el.querySelector(".dist").innerText=(d*1000).toFixed(0)+" m";
+  }else{
+   w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
+  }
 
  });
 
