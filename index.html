@@ -34,6 +34,7 @@ body{
 .waypoint{
  position:absolute;
  text-align:center;
+ transition:transform 0.1s;
 }
 
 .name{
@@ -57,8 +58,6 @@ body{
  font-weight:700;
  border-radius:8px;
 }
-
-/* brújula */
 
 #compass{
  position:absolute;
@@ -145,17 +144,8 @@ function startRadar(){
   userLon=pos.coords.longitude;
  });
 
- if(typeof DeviceOrientationEvent.requestPermission==="function"){
-  DeviceOrientationEvent.requestPermission().then(response=>{
-   if(response==="granted"){
-    window.addEventListener("deviceorientation",handleOrientation);
-    window.addEventListener("deviceorientationabsolute",handleOrientation,true);
-   }
-  });
- }else{
-  window.addEventListener("deviceorientation",handleOrientation);
-  window.addEventListener("deviceorientationabsolute",handleOrientation,true);
- }
+ window.addEventListener("deviceorientation",handleOrientation);
+ window.addEventListener("deviceorientationabsolute",handleOrientation,true);
 
 }
 
@@ -166,7 +156,6 @@ function angleDiff(a,b){
 function handleOrientation(e){
 
  const now=Date.now();
-
  if(now-lastUpdate<40) return;
  lastUpdate=now;
 
@@ -265,6 +254,18 @@ function update(){
   }else{
    w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
   }
+
+  /* tamaño según distancia */
+
+  let scale;
+
+  if(d<0.1) scale=2.2;
+  else if(d<0.3) scale=1.8;
+  else if(d<0.7) scale=1.4;
+  else if(d<1.5) scale=1.1;
+  else scale=0.8;
+
+  w.el.style.transform="scale("+scale+")";
 
  });
 
