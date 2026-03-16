@@ -120,6 +120,8 @@ const waypoints=[
 let userLat=null;
 let userLon=null;
 let heading=0;
+let smoothX=0;
+let smoothY=0;
 let lastUpdate=0;
 
 const radar=document.getElementById("radar");
@@ -155,29 +157,34 @@ function angleDiff(a,b){
 
 function handleOrientation(e){
 
- const now=Date.now();
- if(now-lastUpdate<40) return;
- lastUpdate=now;
+ const now = Date.now();
+ if(now-lastUpdate < 40) return;
+ lastUpdate = now;
 
- let newHeading;
+ let rawHeading;
 
- if(e.webkitCompassHeading!==undefined){
-  newHeading=e.webkitCompassHeading;
+ if(e.webkitCompassHeading !== undefined){
+  rawHeading = e.webkitCompassHeading;
  }
- else if(e.alpha!==null){
-  newHeading=360-e.alpha;
+ else if(e.alpha !== null){
+  rawHeading = 360 - e.alpha;
  }
  else{
   return;
  }
 
- if(heading===0) heading=newHeading;
+ /* convertir a vector */
+ const rad = rawHeading * Math.PI/180;
+ const x = Math.cos(rad);
+ const y = Math.sin(rad);
 
- const diff=angleDiff(heading,newHeading);
+ /* suavizado vectorial */
+ smoothX = smoothX*0.9 + x*0.1;
+ smoothY = smoothY*0.9 + y*0.1;
 
- heading+=diff*0.15;
+ heading = (Math.atan2(smoothY,smoothX)*180/Math.PI + 360) % 360;
 
- compass.style.transform="rotate("+(-heading)+"deg)";
+ compass.style.transform = "rotate("+(-heading)+"deg)";
 
  update();
 
