@@ -162,7 +162,16 @@ function handleOrientation(e){
  if(e.webkitCompassHeading!==undefined){
   heading=e.webkitCompassHeading;
  }else{
-  heading=360-e.alpha;
+  let newHeading;
+
+if(e.webkitCompassHeading!==undefined){
+ newHeading = e.webkitCompassHeading;
+}else{
+ newHeading = 360 - e.alpha;
+}
+
+/* suavizado */
+heading = heading*0.9 + newHeading*0.1;
  }
 
  compass.style.transform="rotate("+(-heading)+"deg)";
