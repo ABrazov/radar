@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap" rel="stylesheet">
+
+<style>
+
+body{
+ margin:0;
+ background:black;
+ color:white;
+ font-family:'Inter',sans-serif;
+ overflow:hidden;
+}
+
+#radar{
+ position:relative;
+ width:100vw;
+ height:100vh;
+}
+
+.center{
+ position:absolute;
+ left:50%;
+ top:50%;
+ transform:translate(-50%,-50%);
+ font-size:40px;
+ opacity:0.7;
+}
+
+.waypoint{
+ position:absolute;
+ text-align:center;
+}
+
+.name{
+ font-size:22px;
+}
+
+.dist{
+ font-size:14px;
+ opacity:0.8;
+}
+
+#start{
+ position:absolute;
+ top:20px;
+ left:50%;
+ transform:translateX(-50%);
+ background:white;
+ color:black;
+ border:none;
+ padding:12px 20px;
+ font-weight:700;
+ border-radius:8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="radar">
+<div class="center">▲</div>
+<button id="start" onclick="startRadar()">Activar radar</button>
+</div>
+
+<script>
+
+const waypoints=[
+ {name:"Colegio",lat:40.4168,lon:-3.7038},
+ {name:"Cafe",lat:40.4175,lon:-3.7020},
+ {name:"Tienda",lat:40.4155,lon:-3.7050}
+];
+
+let userLat=null;
+let userLon=null;
+let heading=0;
+
+const radar=document.getElementById("radar");
+
+waypoints.forEach(w=>{
+ const el=document.createElement("div");
+ el.className="waypoint";
+ el.innerHTML=
+  "<div class='name'>▲ "+w.name+"</div>"+
+  "<div class='dist'>...</div>";
+ w.el=el;
+ radar.appendChild(el);
+});
+
+function startRadar(){
+
+ document.getElementById("start").style.display="none";
+
+ navigator.geolocation.watchPosition(pos=>{
+  userLat=pos.coords.latitude;
+  userLon=pos.coords.longitude;
+ });
+
+ if(typeof DeviceOrientationEvent.requestPermission==="function"){
+  DeviceOrientationEvent.requestPermission().then(response=>{
+   if(response==="granted"){
+    window.addEventListener("deviceorientation",handleOrientation);
+   }
+  });
+ }else{
+  window.addEventListener("deviceorientation",handleOrientation);
+ }
+
+}
+
+function handleOrientation(e){
+
+ if(e.webkitCompassHeading!==undefined){
+  heading=e.webkitCompassHeading;
+ }else{
+  heading=360-e.alpha;
+ }
+
+ update();
+
+}
+
+function distance(lat1,lon1,lat2,lon2){
+
+ const R=6371;
+
+ const dLat=(lat2-lat1)*Math.PI/180;
+ const dLon=(lon2-lon1)*Math.PI/180;
+
+ const a=
+  Math.sin(dLat/2)**2+
+  Math.cos(lat1*Math.PI/180)*
+  Math.cos(lat2*Math.PI/180)*
+  Math.sin(dLon/2)**2;
+
+ const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+
+ return R*c;
+
+}
+
+function bearing(lat1,lon1,lat2,lon2){
+
+ const y=Math.sin((lon2-lon1)*Math.PI/180)*Math.cos(lat2*Math.PI/180);
+
+ const x=
+  Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180)-
+  Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+  Math.cos((lon2-lon1)*Math.PI/180);
+
+ return (Math.atan2(y,x)*180/Math.PI+360)%360;
+
+}
+
+function update(){
+
+ if(userLat===null)return;
+
+ waypoints.forEach(w=>{
+
+  const b=bearing(userLat,userLon,w.lat,w.lon);
+
+  let diff=b-heading;
+
+  if(diff>180)diff-=360;
+  if(diff<-180)diff+=360;
+
+  const x=window.innerWidth/2+diff*4;
+
+  const d=distance(userLat,userLon,w.lat,w.lon);
+
+  w.el.style.left=x+"px";
+  w.el.style.top="40%";
+
+  w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
+
+ });
+
+}
+
+</script>
+
+</body>
+</html>
