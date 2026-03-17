@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap" rel="stylesheet">
 
 <style>
-
 body{
  margin:0;
  background:black;
@@ -37,14 +36,8 @@ body{
  transition:transform 0.1s;
 }
 
-.name{
- font-size:22px;
-}
-
-.dist{
- font-size:14px;
- opacity:0.8;
-}
+.name{ font-size:24px; }
+.dist{ font-size:16px; opacity:0.8; }
 
 #start{
  position:absolute;
@@ -59,6 +52,7 @@ body{
  border-radius:8px;
 }
 
+/* brújula */
 #compass{
  position:absolute;
  top:20px;
@@ -88,7 +82,6 @@ body{
 .s{bottom:5px}
 .e{right:5px;left:auto;top:50%;transform:translateY(-50%)}
 .o{left:5px;top:50%;transform:translateY(-50%)}
-
 </style>
 </head>
 
@@ -113,21 +106,30 @@ body{
 
 <script>
 
+/* SOLO TU COLEGIO */
 const waypoints=[
-{name:"Colegio",lat:40.5089,lon:-3.6792},
-{name:"Casa",lat:40.5045,lon:-3.6692}
+ {name:"Colegio",lat:40.50891,lon:-3.67920}
 ];
 
+/* ESTADO */
 let userLat=null;
 let userLon=null;
+
 let heading=0;
 let smoothX=0;
 let smoothY=0;
 let lastUpdate=0;
 
+/* GPS FUSION */
+let lastLat=null;
+let lastLon=null;
+let gpsHeading=null;
+let speed=0;
+
 const radar=document.getElementById("radar");
 const compass=document.getElementById("compass-inner");
 
+/* CREAR ELEMENTO */
 waypoints.forEach(w=>{
  const el=document.createElement("div");
  el.className="waypoint";
@@ -138,13 +140,32 @@ waypoints.forEach(w=>{
  radar.appendChild(el);
 });
 
+/* INICIO */
 function startRadar(){
 
  document.getElementById("start").style.display="none";
 
  navigator.geolocation.watchPosition(pos=>{
+
   userLat=pos.coords.latitude;
   userLon=pos.coords.longitude;
+
+  speed = pos.coords.speed || 0;
+
+  if(lastLat!==null){
+
+   const dx = userLon - lastLon;
+   const dy = userLat - lastLat;
+
+   const angle = Math.atan2(dx,dy)*180/Math.PI;
+
+   gpsHeading = (angle + 360) % 360;
+
+  }
+
+  lastLat=userLat;
+  lastLon=userLon;
+
  });
 
  window.addEventListener("deviceorientation",handleOrientation);
@@ -152,10 +173,7 @@ function startRadar(){
 
 }
 
-function angleDiff(a,b){
- return (b - a + 540) % 360 - 180;
-}
-
+/* ORIENTACIÓN */
 function handleOrientation(e){
 
  const now = Date.now();
@@ -174,16 +192,25 @@ function handleOrientation(e){
   return;
  }
 
- /* convertir a vector */
  const rad = rawHeading * Math.PI/180;
  const x = Math.cos(rad);
  const y = Math.sin(rad);
 
- /* suavizado vectorial */
  smoothX = smoothX*0.9 + x*0.1;
  smoothY = smoothY*0.9 + y*0.1;
 
  heading = (Math.atan2(smoothY,smoothX)*180/Math.PI + 360) % 360;
+
+ let finalHeading = heading;
+
+ if(speed > 1 && gpsHeading !== null){
+
+  let diff = (gpsHeading - heading + 540) % 360 - 180;
+  finalHeading = heading + diff * 0.5;
+
+ }
+
+ heading = finalHeading;
 
  compass.style.transform = "rotate("+(-heading)+"deg)";
 
@@ -191,6 +218,7 @@ function handleOrientation(e){
 
 }
 
+/* DISTANCIA */
 function distance(lat1,lon1,lat2,lon2){
 
  const R=6371;
@@ -210,6 +238,7 @@ function distance(lat1,lon1,lat2,lon2){
 
 }
 
+/* DIRECCIÓN */
 function bearing(lat1,lon1,lat2,lon2){
 
  const y=Math.sin((lon2-lon1)*Math.PI/180)*Math.cos(lat2*Math.PI/180);
@@ -223,59 +252,56 @@ function bearing(lat1,lon1,lat2,lon2){
 
 }
 
+/* ACTUALIZAR */
 function update(){
 
  if(userLat===null)return;
 
- waypoints.forEach(w=>{
+ const w=waypoints[0];
 
-  const b=bearing(userLat,userLon,w.lat,w.lon);
+ const b=bearing(userLat,userLon,w.lat,w.lon);
 
-  let diff=b-heading;
+ let diff=b-heading;
 
-  if(diff>180)diff-=360;
-  if(diff<-180)diff+=360;
+ if(diff>180)diff-=360;
+ if(diff<-180)diff+=360;
 
-  let x=window.innerWidth/2+diff*4;
+ let x=window.innerWidth/2+diff*4;
 
-  const d=distance(userLat,userLon,w.lat,w.lon);
+ const d=distance(userLat,userLon,w.lat,w.lon);
 
-  let arrow="▲";
+ let arrow="▲";
 
-  if(x<0){
-   x=10;
-   arrow="←";
-  }
+ if(x<0){
+  x=10;
+  arrow="←";
+ }
 
-  if(x>window.innerWidth-80){
-   x=window.innerWidth-80;
-   arrow="→";
-  }
+ if(x>window.innerWidth-100){
+  x=window.innerWidth-100;
+  arrow="→";
+ }
 
-  w.el.style.left=x+"px";
-  w.el.style.top="40%";
+ w.el.style.left=x+"px";
+ w.el.style.top="45%";
 
-  w.el.querySelector(".name").innerText=arrow+" "+w.name;
+ w.el.querySelector(".name").innerText=arrow+" "+w.name;
 
-  if(d<1){
-   w.el.querySelector(".dist").innerText=(d*1000).toFixed(0)+" m";
-  }else{
-   w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
-  }
+ if(d<1){
+  w.el.querySelector(".dist").innerText=(d*1000).toFixed(0)+" m";
+ }else{
+  w.el.querySelector(".dist").innerText=d.toFixed(2)+" km";
+ }
 
-  /* tamaño según distancia */
+ let scale;
 
-  let scale;
+ if(d<0.1) scale=2.2;
+ else if(d<0.3) scale=1.8;
+ else if(d<0.7) scale=1.4;
+ else if(d<1.5) scale=1.1;
+ else scale=0.8;
 
-  if(d<0.1) scale=2.2;
-  else if(d<0.3) scale=1.8;
-  else if(d<0.7) scale=1.4;
-  else if(d<1.5) scale=1.1;
-  else scale=0.8;
-
-  w.el.style.transform="scale("+scale+")";
-
- });
+ w.el.style.transform="scale("+scale+")";
 
 }
 
